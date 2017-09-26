@@ -1,12 +1,14 @@
-# weblorean
-Weblorean: A time-travel tool for web admins and IT security people
+# WebLorean
+A time-travel tool for web admins and IT security people.
 
 ## Introduction
 
 The idea behind this tool is explained on the article "Abusing the Past",
-originally published on 2600 Magazine, Volume 32, Issue One. You can
-read an only version here: http://blogs.buanzo.com.ar/2015/05/abusing-the-past-a-2600-article-published-volume-32-number-one.html
-The first release of WebLorean was in November, 2015: http://blogs.buanzo.com.ar/2015/11/weblorean-the-abusing-the-past-script.html
+originally published on 2600 Magazine, Volume 32, Issue One.  You can read
+an online version here:
+http://blogs.buanzo.com.ar/2015/05/abusing-the-past-a-2600-article-published-volume-32-number-one.html
+The first release of WebLorean was in November, 2015:
+http://blogs.buanzo.com.ar/2015/11/weblorean-the-abusing-the-past-script.html
 
 For Ekoparty 2017, where WebLorean is set to be presented at Ekolabs, this
 git release is made available.
