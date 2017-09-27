@@ -5,6 +5,7 @@ import time
 import socket
 import argparse
 import requests
+import urllib3
 from pprint import pprint
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -41,7 +42,9 @@ class WLArgParseHelpers():
         errmsg = "{} inaccesible or invalid (http://?)".format(url)
         timeout_errmsg = "Timeout trying to access {}".format(url)
         try:
-            r = requests.get(url, timeout=__default_timeout__)
+            r = requests.get(url,
+                             timeout=__default_timeout__,
+                             verify=False)
         except requests.Timeout:
             raise argparse.ArgumentTypeError(timeout_errmsg)
         except:
@@ -66,6 +69,7 @@ class WebLorean():
         target = target.lower()
         self.url = target
         self.fqdn = target.replace('http://', '').replace('https://', '')
+        self.proto = self.url.split("://")[0]
 
         # ipv4_current lists all IPv4 addresses currently in DNS for fqdn
         self.ipv4_current = None  # updated by self.get_ipv4_records()
@@ -74,13 +78,15 @@ class WebLorean():
         # is listed historically:
         self.ipv4_history = None  # TODO:updated by self.get_hosting_history()
 
-        # raise ValueError("dsadsa")  #TODO: actually use
-
     def get_ipv4_records(self):  # TODO: support IPv6
+        if self.proto is 'https':
+            port = 443
+        else:
+            port = 80
         iplist = []
         try:
             infolist = socket.getaddrinfo(self.fqdn,
-                                          80,
+                                          port,
                                           socket.AF_INET,
                                           socket.SOCK_STREAM)
         except:
@@ -106,10 +112,12 @@ class WebLorean():
         print("Historic addresses, NO current ones: {}".format(curated_hh))
         for oldhost in curated_hh:
             # First, get html for oldhost's default website (no "Host:" header)
-            url = 'http://{}/'.format(oldhost)
+            url = '{}://{}/'.format(self.proto, oldhost)
             print("Getting html for default website at {}".format(url))
             try:
-                r = requests.get(url, timeout=__default_timeout__)
+                r = requests.get(url,
+                                 timeout=__default_timeout__,
+                                 verify=False)
             except requests.Timeout:
                 print("Timeout accessing {}".format(oldhost))
                 continue
@@ -126,7 +134,8 @@ class WebLorean():
             try:
                 r = requests.get(url,
                                  headers=headers,
-                                 timeout=__default_timeout__)
+                                 timeout=__default_timeout__,
+                                 verify=False)
             except requests.Timeout:
                 print("Timeout accessing {} via {}".format(url, oldhost))
                 continue
@@ -143,7 +152,8 @@ class WebLorean():
             try:
                 r = requests.get(url,
                                  headers=headers,
-                                 timeout=__default_timeout__)
+                                 timeout=__default_timeout__,
+                                 verify=False)
             except requests.Timeout:
                 print("Timeout trying inexistant host via {}".format(oldhost))
                 continue
@@ -159,7 +169,10 @@ class WebLorean():
                 print("No luck")
                 continue
             else:
-                print("{} seems accesible at {}".format(self.fqdn, oldhost))
+                if r.status_code is requests.codes.ok:
+                    print("{} seems accesible at {}".format(self.fqdn, oldhost))
+                else:
+                    print("Not 200 OK, skipping.")
                 continue
 
     def get_hosting_history(self):
@@ -225,6 +238,8 @@ class WebLorean():
 
 if __name__ == '__main__':
     print(_longprogname())
+    # No concern for these warnings in this case:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     parser = argparse.ArgumentParser(description=_disclaimer(),
                                      formatter_class=RawTextHelpFormatter)
     # TODO: add other methods and apply argparse validations
