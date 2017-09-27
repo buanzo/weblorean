@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
+import time
 import socket
 import argparse
 import requests
 from pprint import pprint
 from bs4 import BeautifulSoup
+from selenium import webdriver
 from pyvirtualdisplay import Display
 from argparse import RawTextHelpFormatter
-
 __author__ = "Arturo 'Buanzo' Busleiman"
 __copyright__ = "Copyright (C) 2017 Arturo Alberto Busleiman"
 __license__ = "GNU General Public License v3.0"
-__version__ = "20170924"
+__version__ = "20170927"
 __longprogname__ = ">>> Weblorean <<<"
 
 __default_timeout__ = 30
@@ -60,6 +61,8 @@ class WebLorean():
             return(None)
         if method is None:
             self.method = WebLorean.METHODS[0]
+        else:
+            self.method = method
         target = target.lower()
         self.url = target
         self.fqdn = target.replace('http://', '').replace('https://', '')
@@ -89,30 +92,124 @@ class WebLorean():
             self.ipv4_current = iplist
             return(iplist)
 
+    def timetravelcheck(self):
+        # This function crafts an http request for self.url, but connects
+        # to historic ipv4 addresses for self.fqdn. This is the weblorean
+        # concept, as explained on "Abusing the Past" (2600 Vol 32 Issue 1)
+        curated_hh = self.ipv4_history
+        for ip in self.ipv4_current:
+            if ip in self.ipv4_history:
+                curated_hh.remove(ip)
+        if len(curated_hh) == 0:
+            print("No historic IPs that are not current also. Nothing to do.")
+            return
+        print("Historic addresses, NO current ones: {}".format(curated_hh))
+        for oldhost in curated_hh:
+            # First, get html for oldhost's default website (no "Host:" header)
+            url = 'http://{}/'.format(oldhost)
+            print("Getting html for default website at {}".format(url))
+            try:
+                r = requests.get(url, timeout=__default_timeout__)
+            except requests.Timeout:
+                print("Timeout accessing {}".format(oldhost))
+                continue
+            except:
+                print("Cant access default website. {} down?.".format(oldhost))
+                continue
+            if r.status_code is not requests.codes.ok:
+                print("default website on {} is not 200 OK.".format(oldhost))
+                continue
+            default_html = r.text
+
+            # Now, we get html for self.fqdn on oldhost
+            headers = {'Host': self.fqdn}
+            try:
+                r = requests.get(url,
+                                 headers=headers,
+                                 timeout=__default_timeout__)
+            except requests.Timeout:
+                print("Timeout accessing {} via {}".format(url, oldhost))
+                continue
+            except:
+                print("Cannot access {} via {}.".format(url, oldhost))
+                continue
+            if r.status_code is not requests.codes.ok:
+                print("Status for {} via {} is not 200.".format(url, oldhost))
+                continue
+            host_based_html = r.text
+
+            # Now we also get a definitely non existent fqdn on oldhost
+            headers = {'Host': self.fqdn[::-1]}  # reverse the fqdn string
+            try:
+                r = requests.get(url,
+                                 headers=headers,
+                                 timeout=__default_timeout__)
+            except requests.Timeout:
+                print("Timeout trying inexistant host via {}".format(oldhost))
+                continue
+            except:
+                print("Cannot access inexistant host via {}".format(oldhost))
+            inexistant_host_based_html = r.text
+
+            # So, let's see...
+            if default_html == host_based_html:
+                print("No luck")
+                continue
+            if host_based_html == inexistant_host_based_html:
+                print("No luck")
+                continue
+            else:
+                print("{} seems accesible at {}".format(self.fqdn, oldhost))
+                continue
+
     def get_hosting_history(self):
         # TODO: call specific routines depending on self.method
         # those routines must return a []
         # finally, populate hosting_history whilst removing current
         # addresses.
         if self.method == 'netcraft':
-            return(self.netcraft())
+            self.ipv4_history = self.netcraft()
+            return(self.ipv4_history)
         elif self.method == 'manual':
             # TODO: read off an argument?
             return([])
         pass
 
-    def netcraft(self):
+    def netcraft(self, logpath='weblorean_chromedriver.log'):
+        # TODO: add argparsing for these options, including chromedriver path
         display = Display(visible=0, size=(1360, 768))
         display.start()
-        service_log_path = 'weblorean_chromedriver.log'
+        time.sleep(3)  # TODO: puaj
         service_args = ['--verbose']
         browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver',
                                    service_args=service_args,
-                                   service_log_path=service_log_path)
+                                   service_log_path=logpath)
+        time.sleep(3)  # TODO: puaj
+#        browser.maximize_window()
+        BASE = 'http://toolbar.netcraft.com/site_report?url'
+        DATAURL = '{}={}'.format(BASE, self.url)
+        try:
+            print("SELENIUM: Accessing {}".format(DATAURL))
+            ret = browser.get(DATAURL)
+        except:
+            print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
+            browser.quit()
+            display.stop()
+        try:
+            HTML = browser.page_source
+        except:
+            print("SELENIUM: Exception reading html. Check {}".format(logpath))
+            browser.quit()
+            display.stop()
+
+        HH = self.netcraft_scrape(html=HTML)
+        browser.quit()
+        display.stop()
+        return(HH)
 
     def netcraft_scrape(self, html):
         # TODO: error checking
-        soup = BeautifulSoup(html)
+        soup = BeautifulSoup(html, "lxml")
         hs = soup.find('section',
                        class_='site_report_table',
                        id='history_table')
@@ -125,10 +222,6 @@ class WebLorean():
             iplist.append(tds[1].get_text())
         iplist = list(set(iplist))  # remove dupes
         return(iplist)
-
-    def finalize(self):
-        # TODO: webdriver quit() and cleanup
-        print("WebLorean()::finalize()")
 
 if __name__ == '__main__':
     print(_longprogname())
@@ -164,6 +257,7 @@ if __name__ == '__main__':
         except:
             print("Err >> Unexpected WebLorean error:", sys.exc_info()[0])
         else:
-            print("This gets executed when no exceptions happen")
-            pprint(wl.get_ipv4_records())
-            wl.finalize()
+            print("Current addresses: {}".format(wl.get_ipv4_records()))
+            print("Historic addresses: {}".format(wl.get_hosting_history()))
+            print(">>> Initiating Time Travel... <<<")
+            wl.timetravelcheck()

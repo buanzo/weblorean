@@ -32,7 +32,7 @@ be installed off requirements.txt, so, basically, under Ubuntu, run this:
 ```
 cd /usr/local/src/weblorean
 sudo pip3 install -r requirements.txt
-sudo apt install chromium-chromedriver python3-selenium -y
+sudo apt install chromium-chromedriver python3-selenium xvfb -y
 ```
 
 If you know what you are doing, you can install selenium and chromedriver
