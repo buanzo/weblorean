@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import re
 import sys
 import time
 import socket
@@ -17,7 +18,7 @@ __license__ = "GNU General Public License v3.0"
 __version__ = "20170927"
 __longprogname__ = ">>> Weblorean <<<"
 
-__default_timeout__ = 30
+__default_timeout__ = 5
 
 
 def _disclaimer():
@@ -56,7 +57,7 @@ class WLArgParseHelpers():
 
 class WebLorean():
     # First method is always the default one
-    METHODS = ('netcraft', 'manual',)
+    METHODS = ('netcraft', 'dnshistory', 'manual',)
 
     def __init__(self, target=None, method=None):
         # Target http validation implemented on ArgParser via type=
@@ -182,14 +183,36 @@ class WebLorean():
         # finally, populate hosting_history whilst removing current
         # addresses.
         if self.method == 'netcraft':
-            self.ipv4_history = self.netcraft()
+            print("Notice: Netcraft lists 10 most recent historic addresses.")
+            self.ipv4_history = self.hhMethod_netcraft()
             return(self.ipv4_history)
+        elif self.method == 'dnshistory':
+            self.ipv4_history = self.hhMethod_dnshistory()
         elif self.method == 'manual':
             # TODO: read off an argument?
             return([])
         pass
 
-    def netcraft(self, logpath='weblorean_chromedriver.log'):
+    def hhMethod_dnshistory(self):
+        BASE = 'https://dnshistory.org/historical-dns-records/a'
+        DATAURL = '{}/{}'.format(BASE, self.fqdn)
+        print("Accessing {}".format(DATAURL))
+        try:
+            r = requests.get(DATAURL,
+                             timeout=__default_timeout__,
+                             verify=True)
+        except requests.Timeout:
+            print("Timeout. Returning empty IP history list.")
+            return([])
+        except:
+            print("Exception at requests.get({})".format(DATAURL))
+            print("Returning empty IP history list.")
+            return([])
+        HTML = r.text
+        HH = self.dnshistory_scrape(html=HTML)
+        return(HH)
+
+    def hhMethod_netcraft(self, logpath='weblorean_chromedriver.log'):
         # TODO: add argparsing for these options, including chromedriver path
         display = Display(visible=0, size=(1360, 768))
         display.start()
@@ -222,7 +245,6 @@ class WebLorean():
         return(HH)
 
     def netcraft_scrape(self, html):
-        # TODO: error checking
         soup = BeautifulSoup(html, "lxml")
         hs = soup.find('section',
                        class_='site_report_table',
@@ -239,6 +261,18 @@ class WebLorean():
             iplist.append(tds[1].get_text())
         iplist = list(set(iplist))  # remove dupes
         return(iplist)
+
+    def dnshistory_scrape(self, html):
+        # TODO: everything
+        soup = BeautifulSoup(html, "lxml")
+        rex = '\/dns-records\/(.*)\.in-addr\.arpa\.'
+        hh = []
+        for link in soup.findAll('a', href=True):
+            s = re.search(rex, link['href'])
+            if s:
+                ip = s.group(1)
+                hh.append(ip)
+        return(hh)
 
 if __name__ == '__main__':
     print(_longprogname())
