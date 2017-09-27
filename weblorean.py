@@ -170,7 +170,8 @@ class WebLorean():
                 continue
             else:
                 if r.status_code is requests.codes.ok:
-                    print("{} seems accesible at {}".format(self.fqdn, oldhost))
+                    print("{} seems accesible at {}".format(self.fqdn,
+                                                            oldhost))
                 else:
                     print("Not 200 OK, skipping.")
                 continue
