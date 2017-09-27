@@ -71,7 +71,7 @@ class WebLorean():
         self.fqdn = target.replace('http://', '').replace('https://', '')
         self.proto = self.url.split("://")[0]
 
-        # ipv4_current lists all IPv4 addresses currently in DNS for fqdn
+        # ipv4_current holds all IPv4 addresses currently in DNS for fqdn
         self.ipv4_current = None  # updated by self.get_ipv4_records()
 
         # ipv4_history only holds past addresses, even if a current one
@@ -227,7 +227,10 @@ class WebLorean():
         hs = soup.find('section',
                        class_='site_report_table',
                        id='history_table')
-        trs = hs.find_all('tr')
+        try:
+            trs = hs.find_all('tr')
+        except:
+            return([])
         iplist = []
         for tr in trs:
             tds = tr.find_all('td')
@@ -275,5 +278,8 @@ if __name__ == '__main__':
         else:
             print("Current addresses: {}".format(wl.get_ipv4_records()))
             print("Historic addresses: {}".format(wl.get_hosting_history()))
+            if len(wl.ipv4_history) == 0:
+                print("No hosting history. Skipping target.")
+                continue
             print(">>> Initiating Time Travel... <<<")
             wl.timetravelcheck()
