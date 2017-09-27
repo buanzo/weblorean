@@ -57,7 +57,10 @@ class WLArgParseHelpers():
 
 class WebLorean():
     # First method is always the default one
-    METHODS = ('netcraft', 'dnshistory', 'manual',)
+    METHODS = ('netcraft',
+               'dnshistory',
+               'dnstrails',
+               'manual',)  # TODO: add all,as default
 
     def __init__(self, target=None, method=None):
         # Target http validation implemented on ArgParser via type=
@@ -184,14 +187,18 @@ class WebLorean():
         # addresses.
         if self.method == 'netcraft':
             print("Notice: Netcraft lists 10 most recent historic addresses.")
-            self.ipv4_history = self.hhMethod_netcraft()
-            return(self.ipv4_history)
+            self.ipv4_history = list(set(self.hhMethod_netcraft()))
         elif self.method == 'dnshistory':
-            self.ipv4_history = self.hhMethod_dnshistory()
+            self.ipv4_history = list(set(self.hhMethod_dnshistory()))
+        elif self.method == 'dnstrails':
+            print("Notice: Dnstrails often fails with HTTP 500.")
+            self.ipv4_history = list(set(self.hhMethod_dnstrails()))
         elif self.method == 'manual':
             # TODO: read off an argument?
-            return([])
-        pass
+            self.ipv4_history = []
+        # remove dupes [redundant right now]
+        self.ipv4_history = list(set(self.ipv4_history))
+        return(self.ipv4_history)
 
     def hhMethod_dnshistory(self):
         BASE = 'https://dnshistory.org/historical-dns-records/a'
@@ -244,6 +251,38 @@ class WebLorean():
         display.stop()
         return(HH)
 
+    def hhMethod_dnstrails(self, logpath='weblorean_chromedriver.log'):
+        # TODO: add argparsing for these options, including chromedriver path
+        # TODO: now that we have some additional methods, we can combine code
+        # TODO: and limit redundancy
+        display = Display(visible=0, size=(1360, 768))
+        display.start()
+        time.sleep(3)  # TODO: puaj
+        service_args = ['--verbose']
+        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver',
+                                   service_args=service_args,
+                                   service_log_path=logpath)
+        time.sleep(3)  # TODO: puaj
+        BASE = 'http://research.dnstrails.com/tools/lookup.htm?domain'
+        DATAURL = '{}={}'.format(BASE, self.fqdn)
+        try:
+            print("SELENIUM: Accessing {}".format(DATAURL))
+            ret = browser.get(DATAURL)
+        except:
+            print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
+            browser.quit()
+            display.stop()
+        try:
+            HTML = browser.page_source
+        except:
+            print("SELENIUM: Exception reading html. Check {}".format(logpath))
+            browser.quit()
+            display.stop()
+        HH = self.dnstrails_scrape(html=HTML)
+        browser.quit()
+        display.stop()
+        return(HH)
+
     def netcraft_scrape(self, html):
         soup = BeautifulSoup(html, "lxml")
         hs = soup.find('section',
@@ -263,9 +302,19 @@ class WebLorean():
         return(iplist)
 
     def dnshistory_scrape(self, html):
-        # TODO: everything
         soup = BeautifulSoup(html, "lxml")
         rex = '\/dns-records\/(.*)\.in-addr\.arpa\.'
+        hh = []
+        for link in soup.findAll('a', href=True):
+            s = re.search(rex, link['href'])
+            if s:
+                ip = s.group(1)
+                hh.append(ip)
+        return(hh)
+
+    def dnstrails_scrape(self, html):
+        soup = BeautifulSoup(html, "lxml")
+        rex = '\/tools\/lookup\.htm\?ip=(.*)\&date='
         hh = []
         for link in soup.findAll('a', href=True):
             s = re.search(rex, link['href'])
@@ -301,6 +350,7 @@ if __name__ == '__main__':
         # which will run basic checks on target and raise
         # an exception on error
         print("\nStarting WebLorean for {}".format(target))
+        print("Using '{}' method.".format(args.method))
         try:
             wl = WebLorean(target=target,
                            method=args.method)
