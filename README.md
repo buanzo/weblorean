@@ -15,7 +15,7 @@ git release is made available.
 
 ## Installation
 
-First, you need to clone the weblorean repositorio, or download it (github
+First, you need to clone the weblorean repository, or download it (github
 provides the necessary options at https://github.com/buanzo/weblorean).
 
 ```
@@ -42,8 +42,8 @@ bit delicate.
 
 ## Usage
 
-blahblah blah blah blah blah blah blahblahblahblah blahblah blah blah blah
-blah blah blahblahblah blah blahblah blah blah blah blah blah blahblahbla
-hblahblahblah blah blah blah blah blah blah blahblah blahblahblah blah blah
-blah blah blah blahblahblahblah
+```
+cd weblorean
+./weblorean.py http://www.example.org
+```
 
