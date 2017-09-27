@@ -1,0 +1,3 @@
+* Verify HTTPS support
+* Better http response status handling
+* Remove 302-based false positives
