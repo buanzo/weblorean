@@ -42,6 +42,8 @@ bit delicate.
 
 ## Usage
 
+Make sure you __source fix_environment.sh__ if you are running Ubuntu!
+
 ```
 cd weblorean
 ./weblorean.py http://www.example.org
