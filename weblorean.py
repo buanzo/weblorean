@@ -15,7 +15,7 @@ from argparse import RawTextHelpFormatter
 __author__ = "Arturo 'Buanzo' Busleiman"
 __copyright__ = "Copyright (C) 2017 Arturo Alberto Busleiman"
 __license__ = "GNU General Public License v3.0"
-__version__ = "20170927"
+__version__ = "20170928"
 __longprogname__ = ">>> Weblorean <<<"
 
 __default_timeout__ = 5
@@ -57,17 +57,17 @@ class WLArgParseHelpers():
 
 class WebLorean():
     # First method is always the default one
-    METHODS = ('netcraft',
-               'dnshistory',
-               'dnstrails',
-               'manual',)  # TODO: add all,as default
+    METHODS = {'netcraft': 'hhMethod_netcraft',
+               'dnshistory': 'hhMethod_dnshistory',
+               'dnstrails': 'hhMethod_dnstrails',
+               'all': 'hhMethod_all',}
 
     def __init__(self, target=None, method=None):
         # Target http validation implemented on ArgParser via type=
         if target is None:
             return(None)
         if method is None:
-            self.method = WebLorean.METHODS[0]
+            self.method = 'all'
         else:
             self.method = method
         target = target.lower()
@@ -174,7 +174,7 @@ class WebLorean():
                 continue
             else:
                 if r.status_code is requests.codes.ok:
-                    print("{} seems accesible at {}".format(self.fqdn,
+                    print("\n{} *** seems accesible *** at {}\n".format(self.fqdn,
                                                             oldhost))
                 else:
                     print("Not 200 OK, skipping.")
@@ -183,37 +183,38 @@ class WebLorean():
     def get_hosting_history(self):
         # TODO: call specific routines depending on self.method
         # those routines must return a []
-        # finally, populate hosting_history whilst removing current
-        # addresses.
-        if self.method == 'netcraft':
-            print("Notice: Netcraft lists 10 most recent historic addresses.")
-            self.ipv4_history = list(set(self.hhMethod_netcraft()))
-        elif self.method == 'dnshistory':
-            self.ipv4_history = list(set(self.hhMethod_dnshistory()))
-        elif self.method == 'dnstrails':
-            print("Notice: Dnstrails often fails with HTTP 500.")
-            self.ipv4_history = list(set(self.hhMethod_dnstrails()))
-        elif self.method == 'manual':
-            # TODO: read off an argument?
+        if self.method == 'all':
+            # TODO: run all methods, join results, remove dupes
             self.ipv4_history = []
-        # remove dupes [redundant right now]
+            for method in WebLorean.METHODS.keys():
+                if method == 'all':
+                    continue
+                addrs = getattr(self,WebLorean.METHODS[method])()
+                t = list(set(addrs))
+                self.ipv4_history.extend(t)
+                print("{}: Found {} IP addresses".format(method, len(t)))
+            pass
+        else:
+            self.ipv4_history = getattr(self,WebLorean.METHODS[self.method])()
+        total = len(self.ipv4_history)
         self.ipv4_history = list(set(self.ipv4_history))
+        uniq_total = len(self.ipv4_history)
         return(self.ipv4_history)
 
     def hhMethod_dnshistory(self):
         BASE = 'https://dnshistory.org/historical-dns-records/a'
         DATAURL = '{}/{}'.format(BASE, self.fqdn)
-        print("Accessing {}".format(DATAURL))
+        print("REQUESTS: Accessing {}".format(DATAURL))
         try:
             r = requests.get(DATAURL,
                              timeout=__default_timeout__,
                              verify=True)
         except requests.Timeout:
-            print("Timeout. Returning empty IP history list.")
+            print("REQUESTS: Timeout. Returning empty IP history list.")
             return([])
         except:
-            print("Exception at requests.get({})".format(DATAURL))
-            print("Returning empty IP history list.")
+            print("REQUESTS: Exception at requests.get({})".format(DATAURL))
+            print("REQUESTS: Returning empty IP history list.")
             return([])
         HTML = r.text
         HH = self.dnshistory_scrape(html=HTML)
@@ -330,12 +331,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=_disclaimer(),
                                      formatter_class=RawTextHelpFormatter)
     # TODO: add other methods and apply argparse validations
-    methods = WebLorean.METHODS
-    help = "Method to obtain hosting history (Default: {})".format(methods[0])
+    help = "Method to obtain hosting history (Default: 'all')"
     parser.add_argument("-m", "--method",
-                        default=methods[0],
+                        default='all',
                         help=help,
-                        choices=WebLorean.METHODS)
+                        choices=WebLorean.METHODS.keys())
     parser.add_argument("--version",
                         help="Show version",
                         action='version',
