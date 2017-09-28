@@ -1,4 +1,4 @@
-* Verify HTTPS support
+* Test HTTPS support more thorughly
 * Better http response status handling
 * Remove 302-based false positives
 * allow_redirects=False for requests.get() in proper places
