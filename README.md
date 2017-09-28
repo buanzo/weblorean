@@ -49,3 +49,8 @@ cd weblorean
 ./weblorean.py http://www.example.org
 ```
 
+## What about Windows Subsystem for Linux?
+
+If you are using Ubuntu under Windows 10 / WSL, you can run all non-SELENIUM
+based methods. I dont think xvfb+pyvirtualdisplay are still WSL compatible,
+although chromium DOES work. YMMV.
