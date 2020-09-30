@@ -1,5 +1,5 @@
 # WebLorean
-A time-travel tool for web admins and IT security people.
+A time-travel tool for web admins and IT security people.In the world of technology.
 
 ## Introduction
 
