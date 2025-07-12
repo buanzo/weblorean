@@ -242,13 +242,13 @@ class WebLorean():
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
             browser.get(DATAURL)
-        except:
-            ret = browser.get(DATAURL)
         except WebDriverException:
 
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
+        except Exception:
+            browser.get(DATAURL)
         try:
             HTML = browser.page_source
         except WebDriverException:
@@ -282,8 +282,8 @@ class WebLorean():
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
-        except:
-            ret = browser.get(DATAURL)
+        except Exception:
+            browser.get(DATAURL)
         try:
             HTML = browser.page_source
         except WebDriverException:
