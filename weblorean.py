@@ -10,6 +10,7 @@ import urllib3
 from pprint import pprint
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from pyvirtualdisplay import Display
 from argparse import RawTextHelpFormatter
 __author__ = "Arturo 'Buanzo' Busleiman"
@@ -48,7 +49,7 @@ class WLArgParseHelpers():
                              verify=False)
         except requests.Timeout:
             raise argparse.ArgumentTypeError(timeout_errmsg)
-        except:
+        except requests.RequestException:
             raise argparse.ArgumentTypeError(errmsg)
         if r.status_code is not requests.codes.ok:
             raise argparse.ArgumentTypeError(errmsg)
@@ -94,7 +95,7 @@ class WebLorean():
                                           port,
                                           socket.AF_INET,
                                           socket.SOCK_STREAM)
-        except:
+        except OSError:
             pass
         else:
             for x in infolist:
@@ -126,7 +127,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout accessing {}".format(oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cant access default website. {} down?.".format(oldhost))
                 continue
             if r.status_code is not requests.codes.ok:
@@ -144,7 +145,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout accessing {} via {}".format(url, oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cannot access {} via {}.".format(url, oldhost))
                 continue
             if r.status_code is not requests.codes.ok:
@@ -162,7 +163,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout trying inexistant host via {}".format(oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cannot access inexistant host via {}".format(oldhost))
             inexistant_host_based_html = r.text
 
@@ -213,7 +214,7 @@ class WebLorean():
         except requests.Timeout:
             print("REQUESTS: Timeout. Returning empty IP history list.")
             return([])
-        except:
+        except requests.RequestException:
             print("REQUESTS: Exception at requests.get({})".format(DATAURL))
             print("REQUESTS: Returning empty IP history list.")
             return([])
@@ -237,13 +238,13 @@ class WebLorean():
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
             ret = browser.get(DATAURL)
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
         try:
             HTML = browser.page_source
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception reading html. Check {}".format(logpath))
             browser.quit()
             display.stop()
@@ -270,13 +271,13 @@ class WebLorean():
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
             ret = browser.get(DATAURL)
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
         try:
             HTML = browser.page_source
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception reading html. Check {}".format(logpath))
             browser.quit()
             display.stop()
@@ -309,7 +310,7 @@ class WebLorean():
                        id='history_table')
         try:
             trs = hs.find_all('tr')
-        except:
+        except AttributeError:
             return([])
         iplist = []
         for tr in trs:
@@ -390,7 +391,7 @@ if __name__ == '__main__':
         except ValueError as err:
             print("Err >> WebLorean: Exception: {}".format(target, err))
             continue
-        except:
+        except Exception:
             print("Err >> Unexpected WebLorean error:", sys.exc_info()[0])
         else:
             print("Current addresses: {}".format(wl.get_ipv4_records()))
