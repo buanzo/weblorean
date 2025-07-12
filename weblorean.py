@@ -7,7 +7,6 @@ import socket
 import argparse
 import requests
 import urllib3
-from pprint import pprint
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from pyvirtualdisplay import Display
