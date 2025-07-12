@@ -10,6 +10,7 @@ import urllib3
 from pprint import pprint
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from pyvirtualdisplay import Display
 from argparse import RawTextHelpFormatter
 __author__ = "Arturo 'Buanzo' Busleiman"
@@ -48,7 +49,7 @@ class WLArgParseHelpers():
                              verify=False)
         except requests.Timeout:
             raise argparse.ArgumentTypeError(timeout_errmsg)
-        except:
+        except requests.RequestException:
             raise argparse.ArgumentTypeError(errmsg)
         if r.status_code is not requests.codes.ok:
             raise argparse.ArgumentTypeError(errmsg)
@@ -60,6 +61,7 @@ class WebLorean():
     METHODS = {'netcraft': 'hhMethod_netcraft',
                'dnshistory': 'hhMethod_dnshistory',
                'dnstrails': 'hhMethod_dnstrails',
+               'viewdns': 'hhMethod_viewdns',
                'all': 'hhMethod_all',}
 
     def __init__(self, target=None, method=None):
@@ -83,7 +85,7 @@ class WebLorean():
         self.ipv4_history = None  # TODO:updated by self.get_hosting_history()
 
     def get_ipv4_records(self):  # TODO: support IPv6
-        if self.proto is 'https':
+        if self.proto == 'https':
             port = 443
         else:
             port = 80
@@ -93,8 +95,11 @@ class WebLorean():
                                           port,
                                           socket.AF_INET,
                                           socket.SOCK_STREAM)
+
         except Exception as err:
             print("socket.getaddrinfo failed: {}".format(err))
+        # except OSError: # TODO: integrate or delete
+            # pass
         else:
             for x in infolist:
                 iplist.append(x[4][0])
@@ -125,7 +130,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout accessing {}".format(oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cant access default website. {} down?.".format(oldhost))
                 continue
             if r.status_code is not requests.codes.ok:
@@ -143,7 +148,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout accessing {} via {}".format(url, oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cannot access {} via {}.".format(url, oldhost))
                 continue
             if r.status_code is not requests.codes.ok:
@@ -161,7 +166,7 @@ class WebLorean():
             except requests.Timeout:
                 print("Timeout trying inexistant host via {}".format(oldhost))
                 continue
-            except:
+            except requests.RequestException:
                 print("Cannot access inexistant host via {}".format(oldhost))
             inexistant_host_based_html = r.text
 
@@ -209,7 +214,7 @@ class WebLorean():
         except requests.Timeout:
             print("REQUESTS: Timeout. Returning empty IP history list.")
             return([])
-        except:
+        except requests.RequestException:
             print("REQUESTS: Exception at requests.get({})".format(DATAURL))
             print("REQUESTS: Returning empty IP history list.")
             return([])
@@ -234,12 +239,15 @@ class WebLorean():
             print("SELENIUM: Accessing {}".format(DATAURL))
             browser.get(DATAURL)
         except:
+            ret = browser.get(DATAURL)
+        except WebDriverException:
+
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
         try:
             HTML = browser.page_source
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception reading html. Check {}".format(logpath))
             browser.quit()
             display.stop()
@@ -266,13 +274,15 @@ class WebLorean():
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
             browser.get(DATAURL)
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
+        except:
+            ret = browser.get(DATAURL)
         try:
             HTML = browser.page_source
-        except:
+        except WebDriverException:
             print("SELENIUM: Exception reading html. Check {}".format(logpath))
             browser.quit()
             display.stop()
@@ -281,6 +291,23 @@ class WebLorean():
         display.stop()
         return(HH)
 
+    def hhMethod_viewdns(self):
+        BASE = 'https://viewdns.info/iphistory/'
+        DATAURL = f"{BASE}?domain={self.fqdn}"
+        print(f"REQUESTS: Accessing {DATAURL}")
+        try:
+            r = requests.get(DATAURL, timeout=__default_timeout__, verify=True)
+        except requests.Timeout:
+            print("REQUESTS: Timeout. Returning empty IP history list.")
+            return []
+        except Exception:
+            print(f"REQUESTS: Exception at requests.get({DATAURL})")
+            print("REQUESTS: Returning empty IP history list.")
+            return []
+        HTML = r.text
+        HH = self.viewdns_scrape(html=HTML)
+        return HH
+
     def netcraft_scrape(self, html):
         soup = BeautifulSoup(html, "lxml")
         hs = soup.find('section',
@@ -288,7 +315,7 @@ class WebLorean():
                        id='history_table')
         try:
             trs = hs.find_all('tr')
-        except:
+        except AttributeError:
             return([])
         iplist = []
         for tr in trs:
@@ -320,6 +347,21 @@ class WebLorean():
                 ip = s.group(1)
                 hh.append(ip)
         return(hh)
+
+    def viewdns_scrape(self, html):
+        soup = BeautifulSoup(html, "lxml")
+        table = soup.find('table')
+        if not table:
+            return []
+        hh = []
+        for row in table.find_all('tr'):
+            cols = row.find_all('td')
+            if not cols:
+                continue
+            ip = cols[0].get_text().strip()
+            if re.match(r'^\d{1,3}(?:\.\d{1,3}){3}$', ip):
+                hh.append(ip)
+        return list(set(hh))
 
 if __name__ == '__main__':
     print(_longprogname())
@@ -354,7 +396,7 @@ if __name__ == '__main__':
         except ValueError as err:
             print("Err >> WebLorean: Exception: {}".format(target, err))
             continue
-        except:
+        except Exception:
             print("Err >> Unexpected WebLorean error:", sys.exc_info()[0])
         else:
             print("Current addresses: {}".format(wl.get_ipv4_records()))
