@@ -49,6 +49,16 @@ cd weblorean
 ./weblorean.py http://www.example.org
 ```
 
+### Available methods
+
+WebLorean can gather historical IP addresses using several sources. Use
+the `-m` option to select one of the following methods (default is `all`):
+
+* `netcraft`
+* `dnshistory`
+* `dnstrails`
+* `viewdns`
+
 ## What about Windows Subsystem for Linux?
 
 If you are using Ubuntu under Windows 10 / WSL, you can run all non-SELENIUM
