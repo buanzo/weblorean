@@ -95,8 +95,11 @@ class WebLorean():
                                           port,
                                           socket.AF_INET,
                                           socket.SOCK_STREAM)
-        except OSError:
-            pass
+
+        except Exception as err:
+            print("socket.getaddrinfo failed: {}".format(err))
+        # except OSError: # TODO: integrate or delete
+            # pass
         else:
             for x in infolist:
                 iplist.append(x[4][0])
@@ -195,12 +198,9 @@ class WebLorean():
                 t = list(set(addrs))
                 self.ipv4_history.extend(t)
                 print("{}: Found {} IP addresses".format(method, len(t)))
-            pass
         else:
             self.ipv4_history = getattr(self,WebLorean.METHODS[self.method])()
-        total = len(self.ipv4_history)
         self.ipv4_history = list(set(self.ipv4_history))
-        uniq_total = len(self.ipv4_history)
         return(self.ipv4_history)
 
     def hhMethod_dnshistory(self):
@@ -237,8 +237,11 @@ class WebLorean():
         DATAURL = '{}={}'.format(BASE, self.url)
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
+            browser.get(DATAURL)
+        except:
             ret = browser.get(DATAURL)
         except WebDriverException:
+
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
@@ -270,11 +273,13 @@ class WebLorean():
         DATAURL = '{}={}'.format(BASE, self.fqdn)
         try:
             print("SELENIUM: Accessing {}".format(DATAURL))
-            ret = browser.get(DATAURL)
+            browser.get(DATAURL)
         except WebDriverException:
             print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
             browser.quit()
             display.stop()
+        except:
+            ret = browser.get(DATAURL)
         try:
             HTML = browser.page_source
         except WebDriverException:
