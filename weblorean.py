@@ -60,6 +60,7 @@ class WebLorean():
     METHODS = {'netcraft': 'hhMethod_netcraft',
                'dnshistory': 'hhMethod_dnshistory',
                'dnstrails': 'hhMethod_dnstrails',
+               'viewdns': 'hhMethod_viewdns',
                'all': 'hhMethod_all',}
 
     def __init__(self, target=None, method=None):
@@ -284,6 +285,23 @@ class WebLorean():
         display.stop()
         return(HH)
 
+    def hhMethod_viewdns(self):
+        BASE = 'https://viewdns.info/iphistory/'
+        DATAURL = f"{BASE}?domain={self.fqdn}"
+        print(f"REQUESTS: Accessing {DATAURL}")
+        try:
+            r = requests.get(DATAURL, timeout=__default_timeout__, verify=True)
+        except requests.Timeout:
+            print("REQUESTS: Timeout. Returning empty IP history list.")
+            return []
+        except Exception:
+            print(f"REQUESTS: Exception at requests.get({DATAURL})")
+            print("REQUESTS: Returning empty IP history list.")
+            return []
+        HTML = r.text
+        HH = self.viewdns_scrape(html=HTML)
+        return HH
+
     def netcraft_scrape(self, html):
         soup = BeautifulSoup(html, "lxml")
         hs = soup.find('section',
@@ -323,6 +341,21 @@ class WebLorean():
                 ip = s.group(1)
                 hh.append(ip)
         return(hh)
+
+    def viewdns_scrape(self, html):
+        soup = BeautifulSoup(html, "lxml")
+        table = soup.find('table')
+        if not table:
+            return []
+        hh = []
+        for row in table.find_all('tr'):
+            cols = row.find_all('td')
+            if not cols:
+                continue
+            ip = cols[0].get_text().strip()
+            if re.match(r'^\d{1,3}(?:\.\d{1,3}){3}$', ip):
+                hh.append(ip)
+        return list(set(hh))
 
 if __name__ == '__main__':
     print(_longprogname())
