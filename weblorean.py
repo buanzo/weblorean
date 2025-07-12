@@ -83,7 +83,7 @@ class WebLorean():
         self.ipv4_history = None  # TODO:updated by self.get_hosting_history()
 
     def get_ipv4_records(self):  # TODO: support IPv6
-        if self.proto is 'https':
+        if self.proto == 'https':
             port = 443
         else:
             port = 80
