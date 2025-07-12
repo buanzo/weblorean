@@ -53,6 +53,16 @@ cd weblorean
 ```
 
 By default WebLorean looks for a `chromedriver` executable in the current directory.
+=======
+### Available methods
+
+WebLorean can gather historical IP addresses using several sources. Use
+the `-m` option to select one of the following methods (default is `all`):
+
+* `netcraft`
+* `dnshistory`
+* `dnstrails`
+* `viewdns`
 
 ## What about Windows Subsystem for Linux?
 
