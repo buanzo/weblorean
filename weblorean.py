@@ -5,6 +5,7 @@ import sys
 import time
 import socket
 import argparse
+import os
 import requests
 import urllib3
 from bs4 import BeautifulSoup
@@ -63,7 +64,7 @@ class WebLorean():
                'viewdns': 'hhMethod_viewdns',
                'all': 'hhMethod_all',}
 
-    def __init__(self, target=None, method=None):
+    def __init__(self, target=None, method=None, chromedriver_path=None):
         # Target http validation implemented on ArgParser via type=
         if target is None:
             return(None)
@@ -75,6 +76,10 @@ class WebLorean():
         self.url = target
         self.fqdn = target.replace('http://', '').replace('https://', '')
         self.proto = self.url.split("://")[0]
+
+        if chromedriver_path is None:
+            chromedriver_path = os.path.join(os.getcwd(), 'chromedriver')
+        self.chromedriver_path = chromedriver_path
 
         # ipv4_current holds all IPv4 addresses currently in DNS for fqdn
         self.ipv4_current = None  # updated by self.get_ipv4_records()
@@ -227,7 +232,7 @@ class WebLorean():
         display.start()
         time.sleep(3)  # TODO: puaj
         service_args = ['--verbose']
-        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver',
+        browser = webdriver.Chrome(self.chromedriver_path,
                                    service_args=service_args,
                                    service_log_path=logpath)
         time.sleep(3)  # TODO: puaj
@@ -264,7 +269,7 @@ class WebLorean():
         display.start()
         time.sleep(3)  # TODO: puaj
         service_args = ['--verbose']
-        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver',
+        browser = webdriver.Chrome(self.chromedriver_path,
                                    service_args=service_args,
                                    service_log_path=logpath)
         time.sleep(3)  # TODO: puaj
@@ -374,6 +379,9 @@ if __name__ == '__main__':
                         default='all',
                         help=help,
                         choices=WebLorean.METHODS.keys())
+    parser.add_argument("--chromedriver-path",
+                        default=os.path.join(os.getcwd(), 'chromedriver'),
+                        help="Path to chromedriver binary (default: ./chromedriver)")
     parser.add_argument("--version",
                         help="Show version",
                         action='version',
@@ -391,7 +399,8 @@ if __name__ == '__main__':
         print("Using '{}' method.".format(args.method))
         try:
             wl = WebLorean(target=target,
-                           method=args.method)
+                           method=args.method,
+                           chromedriver_path=args.chromedriver_path)
         except ValueError as err:
             print("Err >> WebLorean: Exception: {}".format(target, err))
             continue

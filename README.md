@@ -47,8 +47,13 @@ Make sure you __source fix_environment.sh__ if you are running Ubuntu!
 ```
 cd weblorean
 ./weblorean.py http://www.example.org
+
+# specify a custom chromedriver path
+./weblorean.py --chromedriver-path /usr/lib/chromium-browser/chromedriver http://www.example.org
 ```
 
+By default WebLorean looks for a `chromedriver` executable in the current directory.
+=======
 ### Available methods
 
 WebLorean can gather historical IP addresses using several sources. Use
