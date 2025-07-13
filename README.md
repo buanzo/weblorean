@@ -23,16 +23,14 @@ cd /usr/local/src
 git clone https://github.com/buanzo/weblorean
 ```
 
-WebLorean was developed and tested on Ubuntu Desktop 16.04 and 17.04. From
-the Ubuntu repositories only __python3-selenium__ and __chromium-chromedriver__ will
-be installed. The rest of the required python 3 modules (make sure you
-use **pip3**, which you can get via __sudo apt install python3-pip__) can
-be installed off requirements.txt, so, basically, under Ubuntu, run this:
+WebLorean was developed and tested on Ubuntu Desktop 16.04 and 17.04.
+All Python requirements can be installed using pip. Run the following
+commands inside the project directory:
 
 ```
 cd /usr/local/src/weblorean
-sudo apt install chromium-chromedriver python3-selenium xvfb python3-pip -y
-sudo pip3 install -r requirements.txt
+pip install -r requirements.txt
+playwright install
 ```
 
 If you know what you are doing, you can install selenium and chromedriver
@@ -41,8 +39,6 @@ specify special command line arguments. Selenium is, by itself, sometimes a
 bit delicate.
 
 ## Usage
-
-Make sure you __source fix_environment.sh__ if you are running Ubuntu!
 
 ```
 cd weblorean
