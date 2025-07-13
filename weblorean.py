@@ -2,16 +2,13 @@
 # -*- coding: utf-8 -*-
 import re
 import sys
-import time
 import socket
 import argparse
 import os
 import requests
 import urllib3
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
-from pyvirtualdisplay import Display
+from playwright.sync_api import sync_playwright
 from argparse import RawTextHelpFormatter
 __author__ = "Arturo 'Buanzo' Busleiman"
 __copyright__ = "Copyright (C) 2017 Arturo Alberto Busleiman"
@@ -87,6 +84,16 @@ class WebLorean():
         # ipv4_history only holds past addresses, even if a current one
         # is listed historically:
         self.ipv4_history = None  # TODO:updated by self.get_hosting_history()
+
+    def _fetch_html_with_playwright(self, url):
+        """Retrieve page HTML using Playwright."""
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, timeout=__default_timeout__ * 1000)
+            html = page.content()
+            browser.close()
+        return html
 
     def get_ipv4_records(self):  # TODO: support IPv6
         if self.proto == 'https':
@@ -228,71 +235,22 @@ class WebLorean():
 
     def hhMethod_netcraft(self, logpath='weblorean_chromedriver.log'):
         # TODO: add argparsing for these options, including chromedriver path
-        display = Display(visible=0, size=(1360, 768))
-        display.start()
-        time.sleep(3)  # TODO: puaj
-        service_args = ['--verbose']
-        browser = webdriver.Chrome(self.chromedriver_path,
-                                   service_args=service_args,
-                                   service_log_path=logpath)
-        time.sleep(3)  # TODO: puaj
-#        browser.maximize_window()
         BASE = 'http://toolbar.netcraft.com/site_report?url'
         DATAURL = '{}={}'.format(BASE, self.url)
-        try:
-            print("SELENIUM: Accessing {}".format(DATAURL))
-            browser.get(DATAURL)
-        except WebDriverException:
-
-            print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
-            browser.quit()
-            display.stop()
-        except Exception:
-            browser.get(DATAURL)
-        try:
-            HTML = browser.page_source
-        except WebDriverException:
-            print("SELENIUM: Exception reading html. Check {}".format(logpath))
-            browser.quit()
-            display.stop()
-
+        print(f"PLAYWRIGHT: Accessing {DATAURL}")
+        HTML = self._fetch_html_with_playwright(DATAURL)
         HH = self.netcraft_scrape(html=HTML)
-        browser.quit()
-        display.stop()
         return(HH)
 
     def hhMethod_dnstrails(self, logpath='weblorean_chromedriver.log'):
         # TODO: add argparsing for these options, including chromedriver path
         # TODO: now that we have some additional methods, we can combine code
         # TODO: and limit redundancy
-        display = Display(visible=0, size=(1360, 768))
-        display.start()
-        time.sleep(3)  # TODO: puaj
-        service_args = ['--verbose']
-        browser = webdriver.Chrome(self.chromedriver_path,
-                                   service_args=service_args,
-                                   service_log_path=logpath)
-        time.sleep(3)  # TODO: puaj
         BASE = 'http://research.dnstrails.com/tools/lookup.htm?domain'
         DATAURL = '{}={}'.format(BASE, self.fqdn)
-        try:
-            print("SELENIUM: Accessing {}".format(DATAURL))
-            browser.get(DATAURL)
-        except WebDriverException:
-            print("SELENIUM: Exception. Exiting. Check {}".format(logpath))
-            browser.quit()
-            display.stop()
-        except Exception:
-            browser.get(DATAURL)
-        try:
-            HTML = browser.page_source
-        except WebDriverException:
-            print("SELENIUM: Exception reading html. Check {}".format(logpath))
-            browser.quit()
-            display.stop()
+        print(f"PLAYWRIGHT: Accessing {DATAURL}")
+        HTML = self._fetch_html_with_playwright(DATAURL)
         HH = self.dnstrails_scrape(html=HTML)
-        browser.quit()
-        display.stop()
         return(HH)
 
     def hhMethod_viewdns(self):
